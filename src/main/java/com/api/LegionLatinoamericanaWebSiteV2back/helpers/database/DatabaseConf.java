@@ -1,7 +1,7 @@
 package com.api.LegionLatinoamericanaWebSiteV2back.helpers.database;
 
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.fileManager.FileManager;
-import com.api.LegionLatinoamericanaWebSiteV2back.helpers.fileManager.FileManagerExceptions;
+import com.api.LegionLatinoamericanaWebSiteV2back.helpers.fileManager.FileManagerException;
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.strings.Constants;
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.ConnectionPoolImp;
 import org.slf4j.Logger;
@@ -10,20 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import java.text.ParseException;
 import java.util.Properties;
 
 @Component
 public class DatabaseConf {
-
-    private final String loggerHeader = ">> DatabaseConf:\n\t";
-
-    private Environment env;
-    private FileManager fileManager;
-    private Logger logger = LoggerFactory.getLogger(DatabaseConf.class);
+    private final Environment env;
+    private final FileManager fileManager;
+    private final Logger logger = LoggerFactory.getLogger(DatabaseConf.class);
+    private final ConnectionPoolImp connectionPool;
     private Properties databaseSecretProperties = null;
     private String fileSecretName;
-    private ConnectionPoolImp connectionPool;
 
     @Autowired
     public DatabaseConf(Environment env, FileManager fileManager, ConnectionPoolImp connectionPool) {
@@ -32,19 +28,24 @@ public class DatabaseConf {
         this.connectionPool = connectionPool;
     }
 
-    public void createConnection() throws DatabaseConfExceptions {
+    public void createConnection() throws DatabaseConfException {
+        String errMsg;
         String[] profile = env.getActiveProfiles();
         if (profile.length > 0) {
+            String loggerHeader = ">> DatabaseConf:\n\t";
             if (profile[0].equals("prod")) {
-                logger.info(loggerHeader + "Was detected production environment.");
+                errMsg = loggerHeader + "Was detected production environment.";
+                logger.info(errMsg);
                 fileSecretName = "database.prod.properties";
             } else {
-                logger.info(loggerHeader + "Was detected a environment different to production.\n\tWas setting for default dev environment.");
+                errMsg = loggerHeader + "Was detected a environment different to production.\n\tWas setting for default dev environment.";
+                logger.info(errMsg);
                 fileSecretName = "database.dev.properties";
             }
             try {
                 if (fileManager.createFileSecret(fileSecretName)) {
-                    logger.info(loggerHeader + "The file " + fileSecretName + " was created/founded successfully.");
+                    errMsg = loggerHeader + "The file " + fileSecretName + " was created/founded successfully.";
+                    logger.info(errMsg);
                     databaseSecretProperties = fileManager.getFilePropertiesSecret(fileSecretName);
                     createPoolConnection(
                             getPropertyByKey("url"),
@@ -54,47 +55,48 @@ public class DatabaseConf {
                             getPropertyByKey("maxConnections")
                     );
                 } else
-                    throw new DatabaseConfExceptions(DatabaseConfExceptions.DatabaseConfExceptionMessage.cantBeCreatedFileProperties);
-            } catch (FileManagerExceptions e) {
-                throw new RuntimeException(e);
+                    throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.CANT_BE_CREATED_FILE_PROFILE);
+            } catch (FileManagerException e) {
+                throw new DatabaseConfException(e.getMessage());
             }
         } else
-            throw new DatabaseConfExceptions(DatabaseConfExceptions.DatabaseConfExceptionMessage.cantReadTheEnvProfile);
+            throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.CANT_READ_THE_ENV_PROFILE);
     }
 
-    private String getPropertyByKey(String key) {
+    private String getPropertyByKey(String key) throws DatabaseConfException {
         if (databaseSecretProperties != null) {
             String value = databaseSecretProperties.getProperty(key);
             try {
                 if (value == null || value.length() == 0) {
-                    databaseSecretProperties.setProperty(key, Constants.propertyFileDefaultValue);
+                    databaseSecretProperties.setProperty(key, Constants.PROPERTY_FILE_DEFAULT_VALUE);
                     fileManager.saveFilePropertiesSecret(databaseSecretProperties, fileSecretName);
+                    return Constants.PROPERTY_FILE_DEFAULT_VALUE;
                 }
                 return value;
-            } catch (FileManagerExceptions e) {
-                throw new RuntimeException(e);
+            } catch (FileManagerException e) {
+                throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.CANT_BE_READ_THE_PROPERTY);
             }
         }
-        return Constants.propertyFileDefaultValue;
+        return Constants.PROPERTY_FILE_DEFAULT_VALUE;
     }
 
-    private void createPoolConnection(String url, String username, String password, String initConnectionsStr, String maxConnectionsStr) throws DatabaseConfExceptions {
-        int initConnections = 0, maxConnections = 0;
+    private void createPoolConnection(String url, String username, String password, String initConnectionsStr, String maxConnectionsStr) throws DatabaseConfException {
+        int initConnections = 0;
+        int maxConnections = 0;
         if (
-                url.equals(Constants.propertyFileDefaultValue)
-                || username.equals(Constants.propertyFileDefaultValue)
-                || password.equals(Constants.propertyFileDefaultValue)
-                || initConnectionsStr.equals(Constants.propertyFileDefaultValue)
-                || maxConnectionsStr.equals(Constants.propertyFileDefaultValue)
-        ) throw new DatabaseConfExceptions(DatabaseConfExceptions.DatabaseConfExceptionMessage.errorToCreateThePoolConnection_validateProperties);
+                url.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+                || username.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+                || password.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+                || initConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+                || maxConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+        ) throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.ERROR_TO_CREATE_THE_POOL_CONNECTION_VALIDATE_PROPERTIES);
         try {
             initConnections = Integer.parseInt(initConnectionsStr);
             maxConnections = Integer.parseInt(maxConnectionsStr);
         } catch (NumberFormatException ex) {
-            logger.debug(ex.getMessage() + "\n" + ex.getStackTrace().toString());
-            throw new DatabaseConfExceptions(DatabaseConfExceptions.DatabaseConfExceptionMessage.errorToCreateThePoolConnection_parsingValues);
+            throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.ERROR_TO_CREATE_THE_POOL_CONNECTION_PARSING_VALUES);
         }
-        if (maxConnections < initConnections) throw new DatabaseConfExceptions(DatabaseConfExceptions.DatabaseConfExceptionMessage.errorToCreateThePoolConnection_theMaxValueCantBeLowerToInitial);
+        if (maxConnections < initConnections) throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.ERROR_TO_CREATE_THE_POOL_CONNECTION_PARSING_VALUES);
         connectionPool.createConnectionPool(url, username, password, initConnections, maxConnections);
     }
 }

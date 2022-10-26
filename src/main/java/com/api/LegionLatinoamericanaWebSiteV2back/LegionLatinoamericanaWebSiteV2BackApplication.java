@@ -1,7 +1,5 @@
 package com.api.LegionLatinoamericanaWebSiteV2back;
 
-import com.api.LegionLatinoamericanaWebSiteV2back.helpers.GlobalManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

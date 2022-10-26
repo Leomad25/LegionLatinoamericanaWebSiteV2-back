@@ -6,7 +6,10 @@ public class ConnectionPoolException extends Exception {
     }
 
     public static class ConnectionPoolExceptionMessage {
-        public final static String
-            errorToCreatingTheConnectionForThePool = "Was throw a error to creating a new connection for the pool.";
+        private ConnectionPoolExceptionMessage() {
+            throw new IllegalStateException("ConnectionPoolExceptionMessage - Utility class");
+        }
+
+        public static final String ERROR_TO_CREATING_THE_CONNECTION_FOR_POOL = "Was throw a error to creating a new connection for the pool.";
     }
 }

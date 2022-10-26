@@ -15,23 +15,21 @@ import java.util.List;
 @Component
 public class ConnectionPoolImp implements ConnectionPoolInt {
 
+    private final Logger logger = LoggerFactory.getLogger(ConnectionPoolImp.class);
+    public static final String LOGGER_HEADER = ">> Connection Pool Imp:\n\t";
+    private List<Connection> connectionPool;
+    private final List<Connection> usedConnections = new ArrayList<>();
+    private String errMsg = "";
     private String url;
     private String username;
     private String password;
-    private int initConnections;
     private int maxConnections;
-    private List<Connection> connectionPool;
-    private List<Connection> usedConnections = new ArrayList<>();
-
-    private Logger logger = LoggerFactory.getLogger(ConnectionPoolImp.class);
-    private final String loggerHeader = ">> Connection Pool Imp:\n\t";
 
     @Override
     public void createConnectionPool(String url, String username, String password, int initConnections, int maxConnections) {
         this.url = url;
         this.username = username;
         this.password = password;
-        this.initConnections = initConnections;
         this.maxConnections = maxConnections;
 
         connectionPool = new ArrayList<>(initConnections);
@@ -42,8 +40,9 @@ public class ConnectionPoolImp implements ConnectionPoolInt {
                 printError(e);
             }
         }
-
-        logger.info(loggerHeader + "Was created the pool connection successfully. Num Connections: " + getSize());
+        errMsg = LOGGER_HEADER + "Was created the pool connection successfully. Num Connections: " + getSize();
+        logger.info(errMsg);
+        errMsg = null;
     }
 
     private Connection createConnection() throws ConnectionPoolException {
@@ -51,14 +50,26 @@ public class ConnectionPoolImp implements ConnectionPoolInt {
             return DriverManager.getConnection(url, username, password);
         } catch (SQLException ex) {
             printError(ex);
-            throw new ConnectionPoolException(ConnectionPoolException.ConnectionPoolExceptionMessage.errorToCreatingTheConnectionForThePool);
+            throw new ConnectionPoolException(ConnectionPoolException.ConnectionPoolExceptionMessage.ERROR_TO_CREATING_THE_CONNECTION_FOR_POOL);
         }
     }
 
     @Override
-    public Connection getConnection() {
-        Connection connection = connectionPool.remove(connectionPool.size() - 1);
-        usedConnections.add(connection);
+    public Connection getConnection() throws ConnectionPoolException {
+        Connection connection;
+        if (!connectionPool.isEmpty()) {
+            connection = connectionPool.remove(connectionPool.size() - 1);
+            usedConnections.add(connection);
+        } else if (getSize() <= maxConnections) {
+            try {
+                connection = createConnection();
+                usedConnections.add(connection);
+            } catch (ConnectionPoolException e) {
+                throw new ConnectionPoolException(e.getMessage());
+            }
+        } else {
+            connection = null;
+        }
         return connection;
     }
 
@@ -74,6 +85,8 @@ public class ConnectionPoolImp implements ConnectionPoolInt {
     }
 
     private void printError(Exception ex) {
-        logger.error(loggerHeader + ex);
+        errMsg = LOGGER_HEADER + ex;
+        logger.error(errMsg);
+        errMsg = null;
     }
 }

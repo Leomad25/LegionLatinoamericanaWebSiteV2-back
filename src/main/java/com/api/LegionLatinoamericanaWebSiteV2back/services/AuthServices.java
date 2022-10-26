@@ -27,18 +27,17 @@ public class AuthServices {
         ) return false;
         responsive.setStatus(HttpStatus.OK);
         responsive.setCode(0);
-        responsive.setMessage(GeneralResponsiveMessage.userDataIsNull);
+        responsive.setMessage(GeneralResponsiveMessage.USER_DATA_IS_NULL);
         responsive.setData(null);
         return true;
     }
 
     private boolean isUserExist (@NonNull GeneralResponsiveModel responsive, long consult) {
-        boolean userExist = false;
-        if (consult > 0) userExist = true;
+        boolean userExist = consult > 0;
         responsive.setStatus(HttpStatus.OK);
         responsive.setCode(0);
-        responsive.setMessage(GeneralResponsiveMessage.userDoesNotExist);
-        if (userExist) responsive.setMessage(GeneralResponsiveMessage.userAlreadyExists);
+        responsive.setMessage(GeneralResponsiveMessage.USER_DOES_NOT_EXIST);
+        if (userExist) responsive.setMessage(GeneralResponsiveMessage.USER_ALREADY_EXISTS);
         responsive.setData(null);
         return userExist;
     }
@@ -47,7 +46,7 @@ public class AuthServices {
         if (consult > 0) {
             responsive.setStatus(HttpStatus.OK);
             responsive.setCode(1);
-            responsive.setMessage(GeneralResponsiveMessage.userCreatedSuccessfully);
+            responsive.setMessage(GeneralResponsiveMessage.USER_CREATED_SUCCESSFULLY);
             responsive.setData(null);
         }
     }
