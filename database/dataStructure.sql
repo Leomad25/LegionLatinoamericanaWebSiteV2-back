@@ -87,6 +87,14 @@ INSERT INTO `legion_latinoamericana_db`.`grl_status` (`id`, `code`, `description
 DELIMITER $$
 
 --
+-- additional
+--
+CREATE PROCEDURE `GET_CURRENT_DATE` ()
+BEGIN
+	SELECT CURDATE() AS "DATE";
+END$$
+
+--
 -- params
 --
 CREATE PROCEDURE `CREATE_PARAM` (IN _key VARCHAR(100), IN _value VARCHAR(200))

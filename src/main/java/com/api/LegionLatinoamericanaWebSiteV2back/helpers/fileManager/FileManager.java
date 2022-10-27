@@ -81,9 +81,19 @@ public class FileManager {
     public String getPropertyByKey(String fileName, String key) throws FileManagerException {
         String value = getFilePropertiesSecret(fileName).getProperty(key);
         if (value == null || value.length() == 0) {
-            saveFilePropertiesSecret(Constants.PROPERTIES_DATABASE_NAME, key);
+            saveFilePropertiesSecret(fileName, key);
             return Constants.PROPERTY_FILE_DEFAULT_VALUE;
         }
         return value;
+    }
+
+    public void setPropertyByKey(String fileName, String key, String value) throws FileManagerException {
+        Properties properties = getFilePropertiesSecret(fileName);
+        try (OutputStream outputStream = new FileOutputStream(new File(Constants.FOLDER_SECRET_PATH).getAbsolutePath() + File.separator + fileName + envTag + EXT_FILE)) {
+            properties.setProperty(key, value);
+            properties.store(outputStream, null);
+        } catch (IOException ex) {
+            throw new FileManagerException(FileManagerException.FileManagerExceptionMessage.CANT_BE_SAVE_THE_PROPERTIES_SECRET_FILE);
+        }
     }
 }

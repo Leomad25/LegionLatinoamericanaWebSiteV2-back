@@ -48,11 +48,11 @@ public class DatabaseConf {
         int initConnections;
         int maxConnections;
         if (
-                url.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
-                || username.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
-                || password.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
-                || initConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
-                || maxConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
+                url.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE) ||
+                username.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE) ||
+                password.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE) ||
+                initConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE) ||
+                maxConnectionsStr.equals(Constants.PROPERTY_FILE_DEFAULT_VALUE)
         ) throw new DatabaseConfException(DatabaseConfException.DatabaseConfExceptionMessage.ERROR_TO_CREATE_THE_POOL_CONNECTION_VALIDATE_PROPERTIES);
         try {
             initConnections = Integer.parseInt(initConnectionsStr);

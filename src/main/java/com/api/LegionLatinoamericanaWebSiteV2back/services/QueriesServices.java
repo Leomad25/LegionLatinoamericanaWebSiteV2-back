@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 @Service
 public class QueriesServices {
@@ -21,6 +18,29 @@ public class QueriesServices {
     @Autowired
     public QueriesServices(ConnectionPoolImp connectionPool) {
         this.connectionPool = connectionPool;
+    }
+
+    public Date getCurrentDate() {
+        Connection conn = null;
+        PreparedStatement preparedStatement = null;
+        Date rtn = null;
+        try {
+            conn = connectionPool.getConnection();
+            if (conn == null) return null;
+            preparedStatement = conn.prepareStatement("CALL legion_latinoamericana_db.GET_CURRENT_DATE();");
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) rtn = resultSet.getDate("DATE");
+        } catch (SQLException | ConnectionPoolException e) {
+            printError(e);
+        } finally {
+            try {
+                if (preparedStatement != null) preparedStatement.close();
+            } catch (SQLException e) {
+                printError(e);
+            }
+            connectionPool.releaseConnection(conn);
+        }
+        return rtn;
     }
 
     public String getGlobalParam(String key) {
