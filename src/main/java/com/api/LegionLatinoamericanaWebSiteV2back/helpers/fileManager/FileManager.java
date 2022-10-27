@@ -1,17 +1,51 @@
 package com.api.LegionLatinoamericanaWebSiteV2back.helpers.fileManager;
 
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.strings.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
 import java.util.Properties;
 
 @Component
 public class FileManager {
+    private final Logger logger = LoggerFactory.getLogger(FileManager.class);
+    private final Environment env;
+    private String envTag = ".dev";
+    public static final String EXT_FILE = ".properties";
+
+    @Autowired
+    public FileManager(Environment env) {
+        this.env = env;
+    }
+
+    @PostConstruct
+    public void postFileManager() throws FileManagerException {
+        String errMsg;
+        String[] profile = env.getActiveProfiles();
+        if (profile.length > 0) {
+            String loggerHeader = ">> FileManager:\n\t";
+            if (profile[0].equals("prod")) {
+                errMsg = loggerHeader + "Was detected production environment.";
+                logger.info(errMsg);
+                envTag = ".prod";
+            } else {
+                errMsg = loggerHeader + "Was detected a environment different to production.\n\tWas setting for default dev environment.";
+                logger.info(errMsg);
+                envTag = ".dev";
+            }
+        } else
+            throw new FileManagerException(FileManagerException.FileManagerExceptionMessage.CANT_READ_THE_ENV_PROFILE);
+    }
+
     public boolean createFileSecret(String fileName) throws FileManagerException {
         File folder = new File(Constants.FOLDER_SECRET_PATH);
         if (!folder.exists()) folder.mkdir();
-        File file = new File(folder.getAbsolutePath() + File.separator + fileName);
+        File file = new File(folder.getAbsolutePath() + File.separator + fileName + envTag + EXT_FILE);
         if (!file.exists()) {
             try {
                 return file.createNewFile();
@@ -23,10 +57,10 @@ public class FileManager {
         }
     }
 
-    public Properties getFilePropertiesSecret(String fileName) throws FileManagerException {
+    private Properties getFilePropertiesSecret(String fileName) throws FileManagerException {
         Properties properties = new Properties();
         File folder = new File(Constants.FOLDER_SECRET_PATH);
-        try (InputStream inputStream = new FileInputStream(folder.getAbsolutePath() + File.separator + fileName)) {
+        try (InputStream inputStream = new FileInputStream(folder.getAbsolutePath() + File.separator + fileName + envTag + EXT_FILE)) {
             properties.load(inputStream);
         } catch (IOException ex) {
             throw new FileManagerException(FileManagerException.FileManagerExceptionMessage.CANT_BE_READ_THE_PROPERTIES_SECRET_FILE);
@@ -34,12 +68,22 @@ public class FileManager {
         return properties;
     }
 
-    public void saveFilePropertiesSecret(Properties properties, String fileName) throws FileManagerException {
-        File folder = new File(Constants.FOLDER_SECRET_PATH);
-        try (OutputStream outputStream = new FileOutputStream(folder.getAbsolutePath() + File.separator + fileName)) {
+    private void saveFilePropertiesSecret(String fileName, String key) throws FileManagerException {
+        Properties properties = getFilePropertiesSecret(fileName);
+        try (OutputStream outputStream = new FileOutputStream(new File(Constants.FOLDER_SECRET_PATH).getAbsolutePath() + File.separator + fileName + envTag + EXT_FILE)) {
+            properties.setProperty(key, Constants.PROPERTY_FILE_DEFAULT_VALUE);
             properties.store(outputStream, null);
         } catch (IOException ex) {
             throw new FileManagerException(FileManagerException.FileManagerExceptionMessage.CANT_BE_SAVE_THE_PROPERTIES_SECRET_FILE);
         }
+    }
+
+    public String getPropertyByKey(String fileName, String key) throws FileManagerException {
+        String value = getFilePropertiesSecret(fileName).getProperty(key);
+        if (value == null || value.length() == 0) {
+            saveFilePropertiesSecret(Constants.PROPERTIES_DATABASE_NAME, key);
+            return Constants.PROPERTY_FILE_DEFAULT_VALUE;
+        }
+        return value;
     }
 }
