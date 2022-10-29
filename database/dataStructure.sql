@@ -176,7 +176,7 @@ BEGIN
     WHERE `grl_users`.`username` = UPPER(_username);
 END$$
 
-CREATE PROCEDURE `GET_USER` (IN _id BIGINT)
+CREATE PROCEDURE `GET_USER_BY_ID` (IN _id BIGINT)
 BEGIN
 	SELECT
 		`grl_users`.`id` AS 'USER_ID',
@@ -192,13 +192,28 @@ BEGIN
 	WHERE `grl_users`.`id`=_id;
 END$$
 
-CREATE PROCEDURE `GET_USER_PASS` (IN _username VARCHAR(45))
+CREATE PROCEDURE `GET_USER_BY_USERNAME` (IN _username VARCHAR(45))
 BEGIN
 	SELECT
 		`grl_users`.`id` AS 'USER_ID',
+		`grl_users`.`username` AS 'USER_NAME',
+        `grl_users`.`email` AS 'USER_EMAIL',
+		`grl_permissions`.`label` AS 'PERM_LABEL',
+		`grl_permissions`.`weight` AS 'PERM_WEIGHT',
+		`grl_status`.`code` AS 'STAT_CODE',
+		`grl_status`.`description` AS 'STAT_DESC'
+	FROM `legion_latinoamericana_db`.`grl_users`
+		INNER JOIN `grl_permissions` ON `grl_users`.`permission`=`grl_permissions`.`id`
+		INNER JOIN `grl_status` ON `grl_users`.`status`=`grl_status`.`id`
+	WHERE `grl_users`.`username`=_username;
+END$$
+
+CREATE PROCEDURE `GET_USER_PASS` (IN _id BIGINT)
+BEGIN
+	SELECT
 		`grl_users`.`password` AS 'USER_PASSWORD'
 	FROM `legion_latinoamericana_db`.`grl_users`
-	WHERE `grl_users`.`username`=UPPER(_username);
+	WHERE `grl_users`.`id`=_id;
 END$$
 
 CREATE PROCEDURE `SET_USER_PERMISSION` (IN _id BIGINT, IN _permission INT)

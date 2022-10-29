@@ -7,11 +7,11 @@ import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.ConnectionPoo
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
 
-@Component
+@Configuration
 public class DatabaseConf {
     private final FileManager fileManager;
     private final Logger logger = LoggerFactory.getLogger(DatabaseConf.class);
