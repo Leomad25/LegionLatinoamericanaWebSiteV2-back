@@ -16,8 +16,8 @@ USE `legion_latinoamericana_db`;
 --
 
 CREATE TABLE `crl_params` (
-  `key` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8_bin NOT NULL,
-  `value` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8_bin NOT NULL,
+  `key` VARCHAR(100) NOT NULL,
+  `value` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`key`),
   UNIQUE KEY `key_UNIQUE` (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8_bin;
@@ -56,6 +56,26 @@ CREATE TABLE `grl_users` (
   CONSTRAINT `fk/grl_users/grl_status`
 	FOREIGN KEY (`status` ASC)
     REFERENCES `legion_latinoamericana_db`.`grl_status` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8_bin;
+
+CREATE TABLE `crl_token_blacklist` (
+  `token` VARCHAR(255) NOT NULL,
+  `token_own` BIGINT,
+  `reason` VARCHAR(255),
+  `blocked_by` BIGINT,
+  `expired` DATE NOT NULL,
+  PRIMARY KEY (`token`),
+  UNIQUE KEY `key_UNIQUE` (`token`),
+  CONSTRAINT `fk/crl_token_blacklist/grl_users`
+	FOREIGN KEY (`blocked_by` ASC)
+	REFERENCES `legion_latinoamericana_db`.`grl_users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk/crl_token_blacklist/grl_users/2`
+	FOREIGN KEY (`token_own` ASC)
+	REFERENCES `legion_latinoamericana_db`.`grl_users` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8_bin;
@@ -108,6 +128,35 @@ BEGIN
 		`value` AS 'PARAM_VALUE'
     FROM `legion_latinoamericana_db`.`crl_params`
     WHERE (`key` = UPPER(_key));
+END$$
+
+--
+-- token balcklist
+--
+CREATE PROCEDURE `CREATE_TOKEN_BLACKLIST_MANUAL` (IN _token VARCHAR(255), IN _own BIGINT, IN _reason VARCHAR(255), IN _blockedBy BIGINT, IN _expired DATE)
+BEGIN
+END$$
+
+CREATE PROCEDURE `CREATE_TOKEN_BLACKLIST_AUTO` (IN _token VARCHAR(255), IN _own BIGINT, IN _expired DATE)
+BEGIN
+	INSERT INTO `legion_latinoamericana_db`.`crl_token_blacklist` (`token`, `token_own`, `expired`) VALUES (_token, _own, _expired);
+    SELECT
+		COUNT(*) AS 'COUNT'
+    FROM `legion_latinoamericana_db`.`crl_token_blacklist`
+    WHERE `token` = _token;
+END$$
+
+CREATE PROCEDURE `GET_TOKEN_BLACKLIST` (IN _token VARCHAR(255))
+BEGIN
+	SELECT
+		`crl_token_blacklist`.`token` AS 'TOKEN_TOKEN',
+        `own`.`username` AS 'USER_OWN',
+        `crl_token_blacklist`.`reason` AS 'TOKEN_REASON',
+        `crl_token_blacklist`.`blocked_by` AS 'TOKEN_BLOCKED_BY',
+        `crl_token_blacklist`.`expired` AS 'TOKEN_EXPIRED'
+	FROM `crl_token_blacklist`
+		INNER JOIN `grl_users` AS `own` ON `crl_token_blacklist`.`token_own`=`own`.`id`
+	WHERE `crl_token_blacklist`.`token` = _token;
 END$$
 
 --

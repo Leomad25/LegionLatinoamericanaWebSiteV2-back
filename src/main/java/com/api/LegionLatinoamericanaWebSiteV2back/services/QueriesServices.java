@@ -2,15 +2,14 @@ package com.api.LegionLatinoamericanaWebSiteV2back.services;
 
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.ConnectionPoolImp;
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.dto.database.GetPermissionDTO;
+import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.dto.database.GetTokenBlacklistDTO;
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.dto.database.GetUserDTO;
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.dto.database.GetUserPassDTO;
 import com.api.LegionLatinoamericanaWebSiteV2back.models.implement.exceptions.ConnectionPoolException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.InitBinder;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -225,6 +224,29 @@ public class QueriesServices {
             preparedStatement = conn.prepareStatement("CALL legion_latinoamericana_db.GET_PERMISSION(?);");
             preparedStatement.setInt(1, permitId);
             list = GetPermissionDTO.getList(preparedStatement.executeQuery());
+        } catch (SQLException | ConnectionPoolException e) {
+            printError(e);
+        } finally {
+            try {
+                if (preparedStatement != null) preparedStatement.close();
+            } catch (SQLException e) {
+                printError(e);
+            }
+            connectionPool.releaseConnection(conn);
+        }
+        return list;
+    }
+
+    public List<GetTokenBlacklistDTO> getTokenBlacklist(String token) {
+        Connection conn = null;
+        PreparedStatement preparedStatement = null;
+        List<GetTokenBlacklistDTO> list = new ArrayList<>();
+        try {
+            conn = connectionPool.getConnection();
+            if (conn == null) return list;
+            preparedStatement = conn.prepareStatement("CALL legion_latinoamericana_db.GET_TOKEN_BLACKLIST(?);");
+            preparedStatement.setString(1, token);
+            list = GetTokenBlacklistDTO.getList(preparedStatement.executeQuery());
         } catch (SQLException | ConnectionPoolException e) {
             printError(e);
         } finally {

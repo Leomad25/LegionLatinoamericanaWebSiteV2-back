@@ -21,13 +21,15 @@ public class UserDetailsServiceImp implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         List<GetUserDTO> userList = queriesServices.getUserByUserName(username);
         if (!userList.isEmpty()) {
+            System.out.println("> userList: " + userList.get(0));
             List<GetUserPassDTO> passList = queriesServices.getUserPass(userList.get(0).getUserId());
-            if (!passList.isEmpty())
+            if (!passList.isEmpty()) {
                 return SecureUserDTO.build(
                         userList.get(0),
                         passList.get(0),
                         queriesServices.getPermissions()
                 );
+            }
         }
         return null;
     }

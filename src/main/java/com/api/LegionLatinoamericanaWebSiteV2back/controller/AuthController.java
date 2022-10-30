@@ -17,9 +17,16 @@ public class AuthController {
     private AuthServices services;
 
     @PostMapping("/register")
-    public GeneralResponsiveModel createAccount(@RequestBody UserModel userModel) {
+    public GeneralResponsiveModel createAccount(@RequestBody UserModel.UserRegisterModel userModel) {
         GeneralResponsiveModel responsive = new GeneralResponsiveModel();
         services.createNewUserAccount(responsive, userModel);
+        return responsive;
+    }
+
+    @PostMapping("/login")
+    public GeneralResponsiveModel loginAccount(@RequestBody UserModel.UserLoginModel userModel) {
+        GeneralResponsiveModel responsive = new GeneralResponsiveModel();
+        services.loginUserAccount(responsive, userModel);
         return responsive;
     }
 }

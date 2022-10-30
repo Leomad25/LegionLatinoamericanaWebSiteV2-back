@@ -2,6 +2,7 @@ package com.api.LegionLatinoamericanaWebSiteV2back.helpers.security.jwt;
 
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.security.dto.SecureUserDTO;
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.security.service.UserDetailsServiceImp;
+import com.api.LegionLatinoamericanaWebSiteV2back.services.QueriesServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,27 +23,33 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     private JwtProvider jwtProvider;
     @Autowired
     private UserDetailsServiceImp detailsService;
+    @Autowired
+    private QueriesServices queriesServices;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
             String token = getToken(request);
-            if (token != null && jwtProvider.validateToken(token)) {
+            if (
+                    token != null &&
+                    queriesServices.getTokenBlacklist(token).isEmpty() &&
+                    jwtProvider.validateToken(token)
+            ) {
                 String username = jwtProvider.getUserNameFromToken(token);
                 UserDetails userDetails = detailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         } catch (Exception e) {
-            String errMsg = ">> JwtTokenFilter:\n" + e;
-            LOGGER.error(errMsg);
+            //String errMsg = ">> JwtTokenFilter:\n" + e;
+            //LOGGER.error(errMsg);
         }
         filterChain.doFilter(request, response);
     }
 
     private String getToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer")) return header.replace("Bearer", "");
+        if (header != null && header.startsWith("Bearer")) return header.replace("Bearer ", "");
         return null;
     }
 }

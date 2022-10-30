@@ -5,20 +5,24 @@ import com.api.LegionLatinoamericanaWebSiteV2back.helpers.fileManager.FileManage
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.security.dto.SecureUserDTO;
 import com.api.LegionLatinoamericanaWebSiteV2back.helpers.strings.Constants;
 import com.api.LegionLatinoamericanaWebSiteV2back.services.QueriesServices;
-import io.jsonwebtoken.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTCreator;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.sql.Date;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class JwtProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JwtProvider.class);
     private final FileManager fileManager;
     @Autowired
     private QueriesServices queriesServices;
@@ -34,46 +38,44 @@ public class JwtProvider {
     @PostConstruct
     public void postJwtProvider() throws FileManagerException {
         secret = fileManager.getPropertyByKey(Constants.PROPERTIES_JWT_NAME, "secret");
-        issuedAt = new Date(0); //queriesServices.getCurrentDate();
+        issuedAt = Date.valueOf(LocalDate.now());
         expiration = issuedAt.getTime() + Long.parseLong(fileManager.getPropertyByKey(Constants.PROPERTIES_JWT_NAME, "expirationTime")) * 1000;
     }
 
     public String generateToken(Authentication authentication) {
         SecureUserDTO secureUserDTO = (SecureUserDTO) authentication.getPrincipal();
-        return Jwts.builder()
-                .setSubject(secureUserDTO.getUsername())
-                .setIssuedAt(issuedAt)
-                .setExpiration(new Date(expiration))
-                .signWith(SignatureAlgorithm.HS512, secret)
-                .compact();
+        // mapping header
+        Map<String, Object> map = new HashMap<>();
+        map.put("alg", "HS256");
+        map.put("typ", "JWT");
+        // load audience
+        String[] audience = new String[secureUserDTO.getAuthorities().size()];
+        List<?> list = secureUserDTO.getAuthorities().stream().toList();
+        for (int i = 0; i < secureUserDTO.getAuthorities().size(); i++) audience[i] = list.get(i).toString();
+        // load mapper
+        JWTCreator.Builder builder = JWT.create().withHeader(map);
+        // load user date
+        builder.withSubject(secureUserDTO.getUsername());
+        builder.withIssuedAt(issuedAt);
+        builder.withExpiresAt(new Date(expiration));
+        builder.withAudience(audience);
+        // return
+        return builder.sign(Algorithm.HMAC256(secret));
     }
 
     public String getUserNameFromToken(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody().getSubject();
+        JWTVerifier verification = JWT.require(Algorithm.HMAC256(secret)).build();
+        return verification.verify(token).getSubject();
     }
 
-    public boolean validateToken(String token) {
-        String errMsg;
-        String header = ">> JwtProvider\n\t";
+    public boolean validateToken(String token) throws TokenExpiredException {
         try {
-            Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
+
+            JWTVerifier verification = JWT.require(Algorithm.HMAC256(secret)).build();
+            verification.verify(token);
             return true;
-        } catch (MalformedJwtException e) {
-            errMsg = header + "Token is Malformed\n" + e;
-            LOGGER.error(errMsg);
-        } catch (UnsupportedJwtException e) {
-            errMsg = header + "Token is Unsupported\n" + e;
-            LOGGER.error(errMsg);
-        } catch (ExpiredJwtException e) {
-            errMsg = header + "Token expired\n" + e;
-            LOGGER.error(errMsg);
-        } catch (IllegalArgumentException e) {
-            errMsg = header + "Token is empty\n" + e;
-            LOGGER.error(errMsg);
-        } catch (SignatureException e) {
-            errMsg = header + "Signature error\n" + e;
-            LOGGER.error(errMsg);
+        } catch (AlgorithmMismatchException | SignatureVerificationException | InvalidClaimException e) {
+            return false;
         }
-        return false;
     }
 }
